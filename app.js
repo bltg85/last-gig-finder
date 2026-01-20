@@ -1,3 +1,6 @@
+// CORS proxy for Setlist.fm API
+const CORS_PROXY = 'https://corsproxy.io/?';
+
 // State
 let settings = {
     apiKey: '',
@@ -226,8 +229,9 @@ async function searchArtist() {
 }
 
 async function searchArtistByName(name) {
+    const apiUrl = `https://api.setlist.fm/rest/1.0/search/artists?artistName=${encodeURIComponent(name)}&sort=relevance`;
     const response = await fetch(
-        `https://api.setlist.fm/rest/1.0/search/artists?artistName=${encodeURIComponent(name)}&sort=relevance`,
+        CORS_PROXY + encodeURIComponent(apiUrl),
         {
             headers: {
                 'Accept': 'application/json',
@@ -256,8 +260,9 @@ async function getArtistSetlists(mbid) {
     const maxPages = 10; // Limit to avoid too many requests
 
     while (page <= maxPages) {
+        const apiUrl = `https://api.setlist.fm/rest/1.0/artist/${mbid}/setlists?p=${page}`;
         const response = await fetch(
-            `https://api.setlist.fm/rest/1.0/artist/${mbid}/setlists?p=${page}`,
+            CORS_PROXY + encodeURIComponent(apiUrl),
             {
                 headers: {
                     'Accept': 'application/json',
