@@ -51,6 +51,31 @@ function setupEventListeners() {
         if (e.key === 'Enter') searchArtist();
     });
 
+    // Autocomplete
+    const artistSearchInput = document.getElementById('artistSearch');
+    let debounceTimer;
+    artistSearchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            handleAutocomplete(e.target.value);
+        }, 300);
+    });
+
+    // Close autocomplete on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            document.getElementById('autocompleteList').classList.remove('show');
+        }
+    });
+
+    // Quick suggestion buttons
+    document.querySelectorAll('.suggestion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('artistSearch').value = btn.dataset.artist;
+            searchArtist();
+        });
+    });
+
     // Copy message
     document.getElementById('copyMessage').addEventListener('click', copyMessage);
 }
@@ -228,8 +253,58 @@ async function searchArtist() {
     }
 }
 
-async function searchArtistByName(name) {
+function debugLog(message) {
+    const debugEl = document.getElementById('debugInfo');
+    debugEl.classList.add('show');
+    debugEl.textContent += message + '\n';
+}
+
+function clearDebug() {
+    const debugEl = document.getElementById('debugInfo');
+    debugEl.textContent = '';
+    debugEl.classList.remove('show');
+}
+
+async function handleAutocomplete(query) {
+    const listEl = document.getElementById('autocompleteList');
+
+    if (query.length < 2) {
+        listEl.classList.remove('show');
+        return;
+    }
+
+    try {
+        const artists = await searchArtists(query);
+        if (artists && artists.length > 0) {
+            listEl.innerHTML = artists.slice(0, 6).map(artist => `
+                <div class="autocomplete-item" data-mbid="${artist.mbid}" data-name="${artist.name}">
+                    <div class="artist-name">${artist.name}</div>
+                    ${artist.disambiguation ? `<div class="artist-info">${artist.disambiguation}</div>` : ''}
+                </div>
+            `).join('');
+
+            // Add click handlers
+            listEl.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.getElementById('artistSearch').value = item.dataset.name;
+                    listEl.classList.remove('show');
+                    searchArtist();
+                });
+            });
+
+            listEl.classList.add('show');
+        } else {
+            listEl.classList.remove('show');
+        }
+    } catch (error) {
+        console.error('Autocomplete error:', error);
+    }
+}
+
+async function searchArtists(name) {
     const apiUrl = `https://api.setlist.fm/rest/1.0/search/artists?artistName=${encodeURIComponent(name)}&sort=relevance`;
+    debugLog(`Fetching: ${apiUrl}`);
+
     const response = await fetch(
         CORS_PROXY + encodeURIComponent(apiUrl),
         {
@@ -240,16 +315,25 @@ async function searchArtistByName(name) {
         }
     );
 
+    debugLog(`Response status: ${response.status}`);
+
     if (!response.ok) {
-        if (response.status === 401) {
-            throw new Error('Invalid API key. Please check your Setlist.fm API key.');
-        }
-        throw new Error(`API error: ${response.status}`);
+        const text = await response.text();
+        debugLog(`Error response: ${text}`);
+        return null;
     }
 
     const data = await response.json();
-    if (data.artist && data.artist.length > 0) {
-        return data.artist[0];
+    debugLog(`Found ${data.artist?.length || 0} artists`);
+    return data.artist || null;
+}
+
+async function searchArtistByName(name) {
+    clearDebug();
+    const artists = await searchArtists(name);
+
+    if (artists && artists.length > 0) {
+        return artists[0];
     }
     return null;
 }

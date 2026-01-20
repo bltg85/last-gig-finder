@@ -40,9 +40,22 @@
             </div>
 
             <div class="search-box">
-                <input type="text" id="artistSearch" placeholder="Search for artist or band...">
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="artistSearch" placeholder="Search for artist or band..." autocomplete="off">
+                    <div id="autocompleteList" class="autocomplete-list"></div>
+                </div>
                 <button id="searchBtn" class="btn-primary">🔍 Search</button>
             </div>
+
+            <div class="quick-suggestions">
+                <span>Try:</span>
+                <button class="suggestion-btn" data-artist="Metallica">Metallica</button>
+                <button class="suggestion-btn" data-artist="Coldplay">Coldplay</button>
+                <button class="suggestion-btn" data-artist="ABBA">ABBA</button>
+                <button class="suggestion-btn" data-artist="Iron Maiden">Iron Maiden</button>
+            </div>
+
+            <div id="debugInfo" class="debug-info"></div>
         </div>
 
         <div class="results-section" id="resultsSection">
