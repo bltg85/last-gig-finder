@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>When did they last play near you?</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎸 When did they last play near you?</h1>
+            <p class="subtitle">Find the last gig and send a message: "It's been 7 years since you played here!"</p>
+        </header>
+
+        <div class="setup-section" id="setupSection">
+            <h2>⚙️ Settings</h2>
+            <div class="form-group">
+                <label for="apiKey">Setlist.fm API Key:</label>
+                <input type="text" id="apiKey" placeholder="Your API key">
+                <small>Get one for free at <a href="https://www.setlist.fm/settings/api" target="_blank">setlist.fm/settings/api</a></small>
+            </div>
+            <div class="form-group">
+                <label for="userLocation">Your location:</label>
+                <input type="text" id="userLocation" placeholder="e.g. Stockholm, London, New York">
+                <button id="useMyLocation" class="btn-secondary">📍 Use my location</button>
+            </div>
+            <div class="form-group">
+                <label for="maxDistance">Max distance (km): <span id="distanceValue">100</span> km</label>
+                <input type="range" id="maxDistance" min="10" max="500" value="100">
+            </div>
+            <button id="saveSettings" class="btn-primary">Save settings</button>
+        </div>
+
+        <div class="search-section" id="searchSection" style="display: none;">
+            <div class="settings-summary">
+                <span id="locationSummary"></span> |
+                <span id="distanceSummary"></span>
+                <button id="editSettings" class="btn-link">Change</button>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="artistSearch" placeholder="Search for artist or band...">
+                <button id="searchBtn" class="btn-primary">🔍 Search</button>
+            </div>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Searching for concerts...</p>
+            </div>
+
+            <div id="artistInfo" class="artist-info" style="display: none;">
+                <h2 id="artistName"></h2>
+            </div>
+
+            <div id="results"></div>
+
+            <div id="noResults" class="no-results" style="display: none;">
+                <p>😢 No concerts found near you for this artist.</p>
+            </div>
+
+            <div id="foundResult" class="found-result" style="display: none;">
+                <div class="result-card">
+                    <div class="years-ago">
+                        <span id="yearsAgoNumber"></span>
+                        <span class="years-label" id="yearsLabel">years ago</span>
+                    </div>
+                    <div class="concert-details">
+                        <h3 id="concertVenue"></h3>
+                        <p id="concertLocation"></p>
+                        <p id="concertDate"></p>
+                        <p class="distance" id="concertDistance"></p>
+                    </div>
+                </div>
+                <div class="message-box">
+                    <h3>📨 Copy message to the band:</h3>
+                    <textarea id="messageText" rows="4"></textarea>
+                    <button id="copyMessage" class="btn-primary">📋 Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Data from <a href="https://www.setlist.fm" target="_blank">Setlist.fm</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
