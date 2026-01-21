@@ -1,5 +1,44 @@
-// CORS proxy for Setlist.fm API
-const CORS_PROXY = 'https://corsproxy.io/?';
+// CORS proxy for Setlist.fm API - using multiple proxies as fallback
+// corsproxy.io doesn't properly forward headers on some mobile browsers
+async function fetchWithProxy(apiUrl, apiKey) {
+    // List of CORS proxies to try - some work better on mobile than others
+    const proxies = [
+        // codetabs forwards headers properly
+        (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        // corsproxy as fallback
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+
+    let lastError = null;
+
+    for (const makeProxyUrl of proxies) {
+        try {
+            const proxyUrl = makeProxyUrl(apiUrl);
+
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'x-api-key': apiKey
+                }
+            });
+
+            // If we got a 406 or similar, try next proxy
+            if (response.status === 406 || response.status === 403) {
+                lastError = new Error(`Proxy returned ${response.status}`);
+                continue;
+            }
+
+            return response;
+        } catch (error) {
+            lastError = error;
+            continue;
+        }
+    }
+
+    // If all proxies failed, throw the last error
+    throw lastError || new Error('All CORS proxies failed');
+}
 
 // State
 let settings = {
@@ -305,15 +344,7 @@ async function searchArtists(name) {
     const apiUrl = `https://api.setlist.fm/rest/1.0/search/artists?artistName=${encodeURIComponent(name)}&sort=relevance`;
     debugLog(`Fetching: ${apiUrl}`);
 
-    const response = await fetch(
-        CORS_PROXY + encodeURIComponent(apiUrl),
-        {
-            headers: {
-                'Accept': 'application/json',
-                'x-api-key': settings.apiKey
-            }
-        }
-    );
+    const response = await fetchWithProxy(apiUrl, settings.apiKey);
 
     debugLog(`Response status: ${response.status}`);
 
@@ -345,29 +376,27 @@ async function getArtistSetlists(mbid) {
 
     while (page <= maxPages) {
         const apiUrl = `https://api.setlist.fm/rest/1.0/artist/${mbid}/setlists?p=${page}`;
-        const response = await fetch(
-            CORS_PROXY + encodeURIComponent(apiUrl),
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'x-api-key': settings.apiKey
-                }
-            }
-        );
 
-        if (!response.ok) break;
+        try {
+            const response = await fetchWithProxy(apiUrl, settings.apiKey);
 
-        const data = await response.json();
-        if (!data.setlist || data.setlist.length === 0) break;
+            if (!response.ok) break;
 
-        allSetlists.push(...data.setlist);
+            const data = await response.json();
+            if (!data.setlist || data.setlist.length === 0) break;
 
-        // Check if we have more pages
-        if (page * data.itemsPerPage >= data.total) break;
-        page++;
+            allSetlists.push(...data.setlist);
 
-        // Small delay to be nice to the API
-        await new Promise(r => setTimeout(r, 200));
+            // Check if we have more pages
+            if (page * data.itemsPerPage >= data.total) break;
+            page++;
+
+            // Small delay to be nice to the API
+            await new Promise(r => setTimeout(r, 200));
+        } catch (error) {
+            console.error('Error fetching setlists:', error);
+            break;
+        }
     }
 
     return allSetlists;
