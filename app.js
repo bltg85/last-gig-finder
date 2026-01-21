@@ -48,6 +48,11 @@ let settings = {
     maxDistance: 100
 };
 
+// Map state
+let searchMap = null;
+let radiusCircle = null;
+let concertMarker = null;
+
 // DOM Elements
 const setupSection = document.getElementById('setupSection');
 const searchSection = document.getElementById('searchSection');
@@ -175,6 +180,93 @@ function showSearchSection() {
     searchSection.style.display = 'block';
     document.getElementById('locationSummary').textContent = `📍 ${settings.location || 'Your location'}`;
     document.getElementById('distanceSummary').textContent = `📏 ${settings.maxDistance} km radius`;
+
+    // Initialize or update the map
+    initMap();
+}
+
+function initMap() {
+    if (!settings.coords) return;
+
+    // If map already exists, just update it
+    if (searchMap) {
+        updateMapView();
+        return;
+    }
+
+    // Create new map
+    searchMap = L.map('searchMap').setView([settings.coords.lat, settings.coords.lng], 8);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(searchMap);
+
+    // Add user location marker
+    L.marker([settings.coords.lat, settings.coords.lng])
+        .addTo(searchMap)
+        .bindPopup(`📍 ${settings.location || 'Your location'}`);
+
+    // Add radius circle
+    radiusCircle = L.circle([settings.coords.lat, settings.coords.lng], {
+        color: '#e94560',
+        fillColor: '#e94560',
+        fillOpacity: 0.15,
+        radius: settings.maxDistance * 1000 // Convert km to meters
+    }).addTo(searchMap);
+
+    // Fit map to circle bounds
+    searchMap.fitBounds(radiusCircle.getBounds());
+}
+
+function updateMapView() {
+    if (!searchMap || !settings.coords) return;
+
+    // Update map center
+    searchMap.setView([settings.coords.lat, settings.coords.lng]);
+
+    // Remove old circle and marker
+    if (radiusCircle) {
+        searchMap.removeLayer(radiusCircle);
+    }
+    if (concertMarker) {
+        searchMap.removeLayer(concertMarker);
+        concertMarker = null;
+    }
+
+    // Add new radius circle
+    radiusCircle = L.circle([settings.coords.lat, settings.coords.lng], {
+        color: '#e94560',
+        fillColor: '#e94560',
+        fillOpacity: 0.15,
+        radius: settings.maxDistance * 1000
+    }).addTo(searchMap);
+
+    // Fit to circle
+    searchMap.fitBounds(radiusCircle.getBounds());
+}
+
+function addConcertToMap(concert) {
+    if (!searchMap || !concert.venueCoords) return;
+
+    // Remove old concert marker
+    if (concertMarker) {
+        searchMap.removeLayer(concertMarker);
+    }
+
+    // Add concert marker with different icon
+    const concertIcon = L.divIcon({
+        className: 'concert-marker',
+        html: '🎸',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
+
+    concertMarker = L.marker([concert.venueCoords.lat, concert.venueCoords.lng], {
+        icon: concertIcon
+    }).addTo(searchMap)
+        .bindPopup(`🎸 ${concert.venue.name}<br>${concert.venue.city.name}`)
+        .openPopup();
 }
 
 function useMyLocation() {
@@ -405,6 +497,8 @@ async function getArtistSetlists(mbid) {
 async function findNearbyConcerts(setlists) {
     const nearbyConcerts = [];
 
+    debugLog(`Searching through ${setlists.length} concerts...`);
+
     for (const setlist of setlists) {
         if (!setlist.venue || !setlist.venue.city) continue;
 
@@ -447,6 +541,16 @@ async function findNearbyConcerts(setlists) {
         const dateB = parseSetlistDate(b.eventDate);
         return dateB - dateA;
     });
+
+    // Log all found concerts for debugging
+    if (nearbyConcerts.length > 0) {
+        debugLog(`\nFound ${nearbyConcerts.length} concerts within ${settings.maxDistance} km:`);
+        nearbyConcerts.forEach((c, i) => {
+            const date = parseSetlistDate(c.eventDate);
+            debugLog(`${i + 1}. ${c.eventDate} - ${c.venue.city.name} (${c.distance} km)`);
+        });
+        debugLog(`\nMost recent: ${nearbyConcerts[0].eventDate} in ${nearbyConcerts[0].venue.city.name}`);
+    }
 
     return nearbyConcerts;
 }
@@ -514,6 +618,9 @@ function displayResult(artistName, concert) {
     // Generate message
     const message = generateMessage(artistName, yearsAgo, concert);
     document.getElementById('messageText').value = message;
+
+    // Add concert to map
+    addConcertToMap(concert);
 
     artistInfo.style.display = 'block';
     foundResult.style.display = 'block';

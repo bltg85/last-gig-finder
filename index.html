@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>When did they last play near you?</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
     <div class="container">
@@ -37,6 +39,10 @@
                 <span id="locationSummary"></span> |
                 <span id="distanceSummary"></span>
                 <button id="editSettings" class="btn-link">Change</button>
+            </div>
+
+            <div class="map-container" id="mapContainer">
+                <div id="searchMap"></div>
             </div>
 
             <div class="search-box">
